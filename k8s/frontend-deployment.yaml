@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: straydog-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: straydog-frontend
+  template:
+    metadata:
+      labels:
+        app: straydog-frontend
+    spec:
+      containers:
+      - name: frontend
+        image: straydog-frontend:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 19006
