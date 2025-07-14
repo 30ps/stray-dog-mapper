@@ -1,18 +1,8 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
 from . import models, schemas, database
-from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
-
-# CORS for mobile dev
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 db_dep = Depends(database.get_db)
 
