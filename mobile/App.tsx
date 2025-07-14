@@ -3,7 +3,8 @@ import { StyleSheet, Text, View, TextInput, Button, ScrollView, Dimensions } fro
 import MapView, { Marker } from 'react-native-maps';
 import axios from 'axios';
 
-const API_URL = 'http://192.168.1.66:8000';
+// Use tunnel URL for development when running in Expo Go
+const API_URL = __DEV__ ? 'https://YOUR_TUNNEL_URL.ngrok-free.app' : 'http://192.168.1.255:8000';
 
 interface Dog {
   id: number;
@@ -32,8 +33,12 @@ export default function App() {
     try {
       const res = await axios.get(`${API_URL}/get_dogs`);
       setDogs(res.data);
-    } catch (e) {
-      console.error(e);
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error('Failed to fetch dogs:', error.message);
+      } else {
+        console.error('An unknown error occurred while fetching dogs');
+      }
     }
   };
 

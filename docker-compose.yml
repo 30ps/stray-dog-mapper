@@ -6,34 +6,35 @@ services:
       context: ./backend
     volumes:
       - ./backend/app:/app/app
-      - straydogs-db-data:/app/straydogs.db
+      - ./data/db:/app/data
     ports:
       - "8000:8000"
     environment:
       - TZ=UTC
+      - SQLITE_DB_PATH=/app/data/straydogs.db
     restart: unless-stopped
-    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    command: >
+      sh -c "mkdir -p /app/data && \
+             touch /app/data/straydogs.db && \
+             chmod 666 /app/data/straydogs.db && \
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
 
   frontend:
     build:
       context: ./mobile
       dockerfile: Dockerfile
     ports:
-      - "8081:8081"
-      - "19000:19000"
-      - "19001:19001"
-      - "19002:19002"
-    volumes:
-      - ./mobile:/app
-      # This prevents the host node_modules from overwriting the container's
-      - /app/node_modules
+      - "19000:19000"  # Expo dev server
+      - "19001:19001"  # Expo dev tools
+      - "19002:19002"  # React Native dev tools
+      - "19006:19006"  # Expo dev menu
     environment:
       - EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0
-      - REACT_NATIVE_PACKAGER_HOSTNAME=0.0.0.0
-    command: npx expo start --tunnel
+      - REACT_NATIVE_PACKAGER_HOSTNAME=192.168.1.5
+    volumes:
+      - ./mobile:/app
+      - /app/node_modules
+    command: npx expo start --lan
     depends_on:
       - backend
     restart: unless-stopped
-
-volumes:
-  straydogs-db-data:
