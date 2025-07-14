@@ -18,10 +18,10 @@ export default function App() {
   const [dogs, setDogs] = useState<Dog[]>([]);
   const [form, setForm] = useState({ breed: '', age: '', size: '', latitude: '', longitude: '' });
   const [region, setRegion] = useState({
-    latitude: 37.78825,
-    longitude: -122.4324,
-    latitudeDelta: 0.0922,
-    longitudeDelta: 0.0421,
+    latitude: 39.3626,
+    longitude: 22.9465,
+    latitudeDelta: 0.5,
+    longitudeDelta: 0.5,
   });
 
   useEffect(() => {
@@ -33,7 +33,7 @@ export default function App() {
       const res = await axios.get(`${API_URL}/get_dogs`);
       setDogs(res.data);
     } catch (e) {
-      // handle error
+      console.error(e);
     }
   };
 
@@ -47,7 +47,7 @@ export default function App() {
       setForm({ breed: '', age: '', size: '', latitude: '', longitude: '' });
       fetchDogs();
     } catch (e) {
-      // handle error
+      console.error(e);
     }
   };
 
