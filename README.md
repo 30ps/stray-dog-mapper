@@ -22,7 +22,6 @@ A mobile application for mapping and tracking stray dogs.
 1. Clone the repository:
 ```bash
 git clone https://github.com/30ps/stray-dog-mapper.git
-cd stray-dog-mapper
 ```
 
 2. Start the services:
@@ -85,14 +84,19 @@ npx expo start
 stray-dog-mapper/
 ├── backend/           # FastAPI backend
 │   ├── app/          # Application code
+│   │   ├── database.py # Database configuration
 │   │   ├── main.py   # Main FastAPI app
 │   │   ├── models.py # Database models
-│   │   └── schemas.py# Pydantic schemas
+│   │   ├── schemas.py# Pydantic schemas
 │   ├── requirements.txt
 │   └── Dockerfile
 ├── mobile/           # React Native mobile app
 │   ├── App.tsx      # Main app component
 │   ├── package.json # Dependencies
+│   ├── tsconfig.json # TypeScript configuration
+│   ├── app.json # Expo configuration
+│   ├── index.ts # Entry point
+│   ├── metro.config.js # Metro bundler configuration
 │   └── Dockerfile
 └── docker-compose.yml
 ```
