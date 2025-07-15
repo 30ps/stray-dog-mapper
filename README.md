@@ -26,7 +26,7 @@ git clone https://github.com/30ps/stray-dog-mapper.git
 
 2. Start the services:
 ```bash
-docker-compose up -d
+docker-compose up --build
 ```
 
 3. Access the services:
