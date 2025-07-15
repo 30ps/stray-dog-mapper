@@ -4,7 +4,7 @@ import MapView, { Marker } from 'react-native-maps';
 import axios from 'axios';
 
 // Use tunnel URL for development when running in Expo Go
-const API_URL = __DEV__ ? 'https://YOUR_TUNNEL_URL.ngrok-free.app' : 'http://192.168.1.255:8000';
+const API_URL = __DEV__ ? 'http://192.168.1.5:8000' : 'http://192.168.1.5:8000';
 
 interface Dog {
   id: number;
