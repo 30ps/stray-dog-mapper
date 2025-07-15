@@ -30,3 +30,50 @@ ENV/
 .vscode/
 *.swp
 *.swo
+
+# Mobile/Expo
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+
+# Metro
+.metro-health-check*
+
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+*.apk
+*.aab
+*.ipa
+
+# Docker
+.docker/
+*.dockerfile
+
+# Test files
+test.py
