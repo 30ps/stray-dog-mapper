@@ -14,9 +14,10 @@ def test_get_dogs():
 
 def test_create_dog_non_dog():
     # Simulate non-dog image
+    valid_base64_image = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/wIAAgMBApU8AAAAAElFTkSuQmCC"
     payload = {
         "name": "Test",
-        "image": "fake_image_data",
+        "image": valid_base64_image,
         "location": {"lat": 0, "lng": 0}
     }
     # Patch analyze_image to return is_dog=False
