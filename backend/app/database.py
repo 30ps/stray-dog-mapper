@@ -1,29 +1,35 @@
-import os
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
 
-# Get database path from environment variable, default to in-memory if not set
-SQLITE_DB_PATH = os.getenv("SQLITE_DB_PATH", "sqlite:///:memory:")
+# ...existing code for SQLAlchemy setup...
 
-# Create the database directory if it doesn't exist
-if SQLITE_DB_PATH and SQLITE_DB_PATH != "sqlite:///:memory:":
-    db_dir = os.path.dirname(SQLITE_DB_PATH)
-    if db_dir:
-        os.makedirs(db_dir, exist_ok=True)
+# Firestore integration
+from google.cloud import firestore
+from app.schemas import DogCreate, Dog
 
-# Use the path in the SQLAlchemy URL
-SQLALCHEMY_DATABASE_URL = f"sqlite:///{SQLITE_DB_PATH}" if not SQLITE_DB_PATH.startswith("sqlite://") else SQLITE_DB_PATH
+db = firestore.Client()
+collection = db.collection("dogs")
 
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
+def get_all_dogs():
+    docs = collection.stream()
+    dogs = []
+    for doc in docs:
+        data = doc.to_dict()
+        data["id"] = doc.id
+        dogs.append(Dog(**data))
+    return dogs
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+def get_dog_by_id(dog_id: str):
+    doc = collection.document(dog_id).get()
+    if not doc.exists:
+        return None
+    data = doc.to_dict()
+    data["id"] = doc.id
+    return Dog(**data)
+
+def add_dog(dog: DogCreate, attributes: dict, image_url: str):
+    dog_data = dog.dict()
+    dog_data.update(attributes)
+    dog_data["image_url"] = image_url
+    doc_ref = collection.document()
+    doc_ref.set(dog_data)
+    dog_data["id"] = doc_ref.id
+    return Dog(**dog_data)
