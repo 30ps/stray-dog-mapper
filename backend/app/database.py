@@ -2,7 +2,7 @@
 # ...existing code for SQLAlchemy setup...
 
 # Firestore integration
-from google.cloud import firestore
+from firebase_admin import firestore
 from app.schemas import DogCreate, Dog
 
 db = firestore.Client()

@@ -1,6 +1,6 @@
 fastapi
-uvicorn[standard]
-sqlalchemy
+firebase-admin
+google-cloud-storage
+google-cloud-vision
+uvicorn
 pydantic
-python-multipart
-alembic
