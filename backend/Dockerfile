@@ -9,4 +9,4 @@ COPY . .
 
 ENV PORT=8080
 
-CMD ["python", "-m", "functions_framework", "--target=stray_dog_mapper", "--port=8080"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]

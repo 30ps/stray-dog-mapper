@@ -1,17 +1,17 @@
-
-import functions_framework
 from fastapi import FastAPI
-from mangum import Mangum
 from app.routes import router
+from starlette.requests import Request
+from starlette.responses import Response
 
 app = FastAPI()
 app.include_router(router)
 
-handler = Mangum(app)
-
 @functions_framework.http
 def stray_dog_mapper(request):
     """
-    Cloud Run entrypoint for FastAPI app using functions_framework and Mangum.
+    Cloud Run entrypoint for FastAPI app using functions_framework.
     """
-    return handler(request)
+    # Convert Flask request to ASGI request
+    asgi_request = Request(request.environ)
+    response = Response()
+    return app(asgi_request.scope, asgi_request.receive, response.send)
