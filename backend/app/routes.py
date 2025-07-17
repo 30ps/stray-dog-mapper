@@ -1,5 +1,4 @@
 from fastapi import APIRouter, HTTPException
-from app.models import Dog
 from app.schemas import DogCreate, DogOut
 from app.database import get_all_dogs, get_dog_by_id, add_dog
 from app.storage import upload_image
