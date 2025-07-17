@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Dict, Any
 
 class DogBase(BaseModel):
     breed: Optional[str] = None
@@ -12,13 +12,13 @@ class DogBase(BaseModel):
     build: Optional[str] = None
     facial_features: Optional[str] = None
     other: Optional[str] = None
-    latitude: float
-    longitude: float
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    image_url: Optional[str] = None
+    attributes: Optional[Dict[str, Any]] = None  # For extra/derived attributes
 
 class DogCreate(DogBase):
-    pass
+    image: str  # base64-encoded image data
 
-class Dog(DogBase):
-    id: int
-    class Config:
-        orm_mode = True
+class DogOut(DogBase):
+    id: Optional[str] = None
