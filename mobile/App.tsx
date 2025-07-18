@@ -16,8 +16,10 @@ interface Dog {
   breed: string;
   age: string;
   size: string;
-  latitude: number;
-  longitude: number;
+  location: {
+    latitude: number;
+    longitude: number;
+  };
   image_url: string;
   timestamp: string;
 }
@@ -46,7 +48,7 @@ export default function App() {
 
   const fetchDogs = async () => {
     try {
-      const res = await axios.get(`${API_URL}/get_dogs`);
+      const res = await axios.get(`${API_URL}/dogs`);
       setDogs(res.data);
     } catch (error) {
       setErrorMsg('Failed to fetch dogs');
@@ -112,11 +114,13 @@ export default function App() {
         name: 'dog.jpg',
         type: 'image/jpeg',
       } as any);
-      formData.append('latitude', String(location.coords.latitude));
-      formData.append('longitude', String(location.coords.longitude));
+      formData.append('location', JSON.stringify({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      }));
       formData.append('timestamp', new Date().toISOString());
 
-      const res = await axios.post(`${API_URL}/add_dog`, formData, {
+      const res = await axios.post(`${API_URL}/dogs`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setPhoto(null);
@@ -145,14 +149,17 @@ export default function App() {
         minZoomLevel={12}
         maxZoomLevel={20}
       >
-        {dogs.map((dog) => (
-          <Marker
-            key={dog.id}
-            coordinate={{ latitude: dog.latitude, longitude: dog.longitude }}
-            title={dog.breed || 'Unknown'}
-            description={`Age: ${dog.age || 'Unknown'}, Size: ${dog.size || 'Unknown'}`}
-            onPress={() => handleMarkerPress(dog)}
-          />
+        {dogs
+          .filter(dog => dog.location && typeof dog.location.latitude === 'number' && typeof dog.location.longitude === 'number')
+          .map((dog) => (
+            <Marker
+              key={dog.id}
+              coordinate={{
+                latitude: dog.location.latitude,
+                longitude: dog.location.longitude,
+              }}
+              // ...other props...
+            />
         ))}
       </MapView>
       <ScrollView style={styles.formContainer}>
@@ -179,7 +186,7 @@ export default function App() {
                 <Text>Age: {selectedDog.age || 'Unknown'}</Text>
                 <Text>Size: {selectedDog.size || 'Unknown'}</Text>
                 <Text>Timestamp: {selectedDog.timestamp ? new Date(selectedDog.timestamp).toLocaleString() : 'Unknown'}</Text>
-                <Text>Lat: {selectedDog.latitude.toFixed(5)}, Lon: {selectedDog.longitude.toFixed(5)}</Text>
+                <Text>Lat: {selectedDog.location.latitude.toFixed(5)}, Lon: {selectedDog.location.longitude.toFixed(5)}</Text>
                 <Button title="Close" onPress={() => setModalVisible(false)} />
               </>
             )}

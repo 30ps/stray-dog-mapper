@@ -1,6 +1,10 @@
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 
+class Location(BaseModel):
+    latitude: float
+    longitude: float
+
 class DogBase(BaseModel):
     breed: Optional[str] = None
     age: Optional[str] = None
@@ -12,8 +16,7 @@ class DogBase(BaseModel):
     build: Optional[str] = None
     facial_features: Optional[str] = None
     other: Optional[str] = None
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
+    location: Optional[Location] = None
     image_url: Optional[str] = None
     attributes: Optional[Dict[str, Any]] = None  # For extra/derived attributes
 
