@@ -1,13 +1,24 @@
 {
   "extends": "./node_modules/expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true,
+    "target": "ES2017",
+    "lib": ["ES2015", "ES2016", "ES2017", "DOM"],
     "jsx": "react-native",
+    "moduleResolution": "node16",
+    "module": "Node16",
+    "allowJs": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "strict": true,
     "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "types": ["react", "react-native"]
   },
   "include": [
     "**/*.ts",
     "**/*.tsx"
-  ]
+  ],
+  "exclude": ["node_modules", "babel.config.js", "metro.config.js"]
 }

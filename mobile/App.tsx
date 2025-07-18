@@ -1,11 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, Button, Dimensions, Alert } from 'react-native';
+
+import React, { useState, useEffect, useRef } from 'react';
+import { StyleSheet, Text, View, TextInput, Button, Modal, Image, TouchableOpacity, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import axios from 'axios';
 import * as Location from 'expo-location';
+// Removed Camera import, using ImagePicker for camera
+import * as ImagePicker from 'expo-image-picker';
 
-// Use tunnel URL for development when running in Expo Go
-const API_URL = __DEV__ ? 'http://192.168.1.5:8000' : 'http://192.168.1.5:8000';
+// Cloud Run backend URL
+const API_URL = 'https://stray-dog-mapper-266065529222.europe-west1.run.app';
+
 
 interface Dog {
   id: number;
@@ -14,11 +18,14 @@ interface Dog {
   size: string;
   latitude: number;
   longitude: number;
+  image_url: string;
+  timestamp: string;
 }
+
 
 export default function App() {
   const [dogs, setDogs] = useState<Dog[]>([]);
-  const [form, setForm] = useState({ breed: '', age: '', size: '' });
+  // Removed form state (breed, age, size)
   const [region, setRegion] = useState({
     latitude: 39.3626,
     longitude: 22.9465,
@@ -27,6 +34,10 @@ export default function App() {
   });
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedDog, setSelectedDog] = useState<Dog | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [photo, setPhoto] = useState<any>(null);
 
   useEffect(() => {
     fetchDogs();
@@ -38,11 +49,8 @@ export default function App() {
       const res = await axios.get(`${API_URL}/get_dogs`);
       setDogs(res.data);
     } catch (error) {
-      if (error instanceof Error) {
-        console.error('Failed to fetch dogs:', error.message);
-      } else {
-        console.error('An unknown error occurred while fetching dogs');
-      }
+      setErrorMsg('Failed to fetch dogs');
+      console.error(error);
     }
   };
 
@@ -53,7 +61,6 @@ export default function App() {
         setErrorMsg('Permission to access location was denied');
         return;
       }
-
       let location = await Location.getCurrentPositionAsync({});
       setLocation(location);
       setRegion({
@@ -68,60 +75,129 @@ export default function App() {
     }
   };
 
+  const openCamera = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Camera permission not granted');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setPhoto(result.assets[0]);
+    }
+  };
+
+  // Removed takePhoto and cameraRef
+
   const submitDog = async () => {
     try {
       if (!location) {
         Alert.alert('Error', 'Location not available. Please try again.');
         return;
       }
-      
-      await axios.post(`${API_URL}/add_dog`, {
-        ...form,
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
+      if (!photo) {
+        Alert.alert('Error', 'Please take a photo of the dog.');
+        return;
+      }
+      setUploading(true);
+      // Upload photo to backend (no breed, age, size)
+      const formData = new FormData();
+      formData.append('file', {
+        uri: photo.uri,
+        name: 'dog.jpg',
+        type: 'image/jpeg',
+      } as any);
+      formData.append('latitude', String(location.coords.latitude));
+      formData.append('longitude', String(location.coords.longitude));
+      formData.append('timestamp', new Date().toISOString());
+
+      const res = await axios.post(`${API_URL}/add_dog`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
-      setForm({ breed: '', age: '', size: '' });
+      setPhoto(null);
+      setUploading(false);
       fetchDogs();
+      Alert.alert('Success', 'Dog sighting submitted!');
     } catch (e) {
+      setUploading(false);
+      Alert.alert('Error', 'Failed to submit dog sighting.');
       console.error(e);
     }
   };
 
+  const handleMarkerPress = (dog: Dog) => {
+    setSelectedDog(dog);
+    setModalVisible(true);
+  };
+
   return (
     <View style={styles.container}>
-      <MapView 
-        style={styles.map} 
-        region={region} 
+      <MapView
+        style={styles.map}
+        region={region}
         onRegionChangeComplete={setRegion}
         zoomEnabled={true}
         minZoomLevel={12}
         maxZoomLevel={20}
       >
-        {dogs.map((dog, idx) => (
+        {dogs.map((dog) => (
           <Marker
-            key={dog.id || idx}
+            key={dog.id}
             coordinate={{ latitude: dog.latitude, longitude: dog.longitude }}
             title={dog.breed || 'Unknown'}
             description={`Age: ${dog.age || 'Unknown'}, Size: ${dog.size || 'Unknown'}`}
+            onPress={() => handleMarkerPress(dog)}
           />
         ))}
       </MapView>
-      <View style={styles.formContainer}>
+      <ScrollView style={styles.formContainer}>
         <Text style={styles.header}>Stray Dog Mapper</Text>
-        <TextInput style={styles.input} placeholder="Breed" value={form.breed} onChangeText={t => setForm(f => ({ ...f, breed: t }))} />
-        <TextInput style={styles.input} placeholder="Age" value={form.age} onChangeText={t => setForm(f => ({ ...f, age: t }))} />
-        <TextInput style={styles.input} placeholder="Size" value={form.size} onChangeText={t => setForm(f => ({ ...f, size: t }))} />
+        {/* Removed breed, age, size text inputs */}
+        {photo && (
+          <Image source={{ uri: photo.uri }} style={{ width: 120, height: 120, alignSelf: 'center', margin: 8, borderRadius: 8 }} />
+        )}
         {errorMsg && <Text style={{ color: 'red' }}>{errorMsg}</Text>}
-        <Button title="Submit" onPress={submitDog} />
-      </View>
+        <Button title={photo ? 'Retake Photo' : 'Take Photo'} onPress={openCamera} />
+        <View style={{ height: 8 }} />
+        {uploading ? <ActivityIndicator size="large" color="#007AFF" /> : <Button title="Submit Sighting" onPress={submitDog} />}
+      </ScrollView>
+
+      {/* Camera Modal removed; using ImagePicker for camera */}
+      {/* Dog Details Modal */}
+      <Modal visible={modalVisible} animationType="slide" transparent={true} onRequestClose={() => setModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            {selectedDog && (
+              <>
+                <Text style={styles.modalTitle}>{selectedDog.breed || 'Unknown Breed'}</Text>
+                <Image source={{ uri: selectedDog.image_url }} style={styles.dogImage} />
+                <Text>Age: {selectedDog.age || 'Unknown'}</Text>
+                <Text>Size: {selectedDog.size || 'Unknown'}</Text>
+                <Text>Timestamp: {selectedDog.timestamp ? new Date(selectedDog.timestamp).toLocaleString() : 'Unknown'}</Text>
+                <Text>Lat: {selectedDog.latitude.toFixed(5)}, Lon: {selectedDog.longitude.toFixed(5)}</Text>
+                <Button title="Close" onPress={() => setModalVisible(false)} />
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
-  formContainer: { padding: 16 },
-  header: { fontSize: 24, fontWeight: 'bold', marginBottom: 16 },
+  formContainer: { padding: 16, backgroundColor: '#fff' },
+  header: { fontSize: 24, fontWeight: 'bold', marginBottom: 16, alignSelf: 'center' },
   input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 4, padding: 8, marginBottom: 8 },
   map: { width: '100%', height: 400, marginTop: 16 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  modalContent: { backgroundColor: '#fff', borderRadius: 12, padding: 24, alignItems: 'center', width: 300 },
+  modalTitle: { fontSize: 22, fontWeight: 'bold', marginBottom: 12 },
+  dogImage: { width: 200, height: 200, borderRadius: 12, marginBottom: 12, backgroundColor: '#eee' },
 });
