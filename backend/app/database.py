@@ -30,16 +30,24 @@ def get_dog_by_id(dog_id: str):
     data["id"] = doc.id
     return DogOut(**data)
 
-def add_dog(dog: DogCreate, attributes: dict, image_url: str):
+def add_dog(dog: DogCreate, attributes: dict, blob_path: str):
     from google.cloud.firestore_v1 import GeoPoint
-    dog_data = dog.dict()
-    # Replace latitude/longitude with GeoPoint
-    dog_data["location"] = GeoPoint(dog_data.pop("latitude"), dog_data.pop("longitude"))
+    dog_data = dog.model_dump()
+    # Extract latitude and longitude from the location dict
+    location = dog_data.pop("location")
+    dog_data["location"] = GeoPoint(location["latitude"], location["longitude"])
     dog_data["attributes"] = attributes
-    dog_data["image_url"] = image_url
+    dog_data["blob_path"] = blob_path
     doc_ref = collection.document()
-    doc_ref.set(dog_data)
+    try:
+        doc_ref.set(dog_data)
+    except Exception as e:
+        logging.error(f"Firestore write failed: {e}", exc_info=True)
+        raise
     dog_data["id"] = doc_ref.id
     # Convert GeoPoint to dict for output
-    dog_data["location"] = {"latitude": dog_data["location"].latitude, "longitude": dog_data["location"].longitude}
+    dog_data["location"] = {
+        "latitude": dog_data["location"].latitude,
+        "longitude": dog_data["location"].longitude
+    }
     return DogOut(**dog_data)

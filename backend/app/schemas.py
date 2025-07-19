@@ -17,7 +17,7 @@ class DogBase(BaseModel):
     facial_features: Optional[str] = None
     other: Optional[str] = None
     location: Optional[Location] = None
-    image_url: Optional[str] = None
+    blob_path: Optional[str] = None  # GCS object path
     attributes: Optional[Dict[str, Any]] = None  # For extra/derived attributes
 
 class DogCreate(DogBase):
@@ -25,3 +25,4 @@ class DogCreate(DogBase):
 
 class DogOut(DogBase):
     id: Optional[str] = None
+    image_url: Optional[str] = None
