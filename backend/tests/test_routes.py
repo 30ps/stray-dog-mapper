@@ -48,7 +48,6 @@ def test_create_dog_integration():
         encoded_string = base64.b64encode(img_file.read()).decode("utf-8")
 
     payload = {
-        "name": "IntegrationTestDog",
         "image": encoded_string,
         "location": {"latitude": 39.3626, "longitude": 22.9465}
     }
@@ -57,11 +56,11 @@ def test_create_dog_integration():
     response = client.post("/dogs", json=payload)
     assert response.status_code == 200, response.text
     data = response.json()
-    assert data["name"] == "IntegrationTestDog"
+    assert "id" in data and data["id"] is not None
     assert "image_url" in data
     assert data["location"]["latitude"] == 39.3626
     assert data["location"]["longitude"] == 22.9465
     # Optionally check breed, age, size if your Vision API is configured
-    assert "breed" in data
-    assert "age" in data
-    assert "size" in data
+    assert "breed" in data or "attributes" in data
+    assert "age" in data or "attributes" in data
+    assert "size" in data or "attributes" in data

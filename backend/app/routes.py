@@ -32,8 +32,8 @@ def create_dog(dog: DogCreate):
     attributes = analyze_image(blob_path)
     if not attributes.get("is_dog"):
         raise HTTPException(status_code=400, detail="Image is not a dog. Please retake.")
-    # Add dog to Firestore (store blob path)
-    new_dog = add_dog(dog, attributes, blob_path)
+    # Add dog to Firestore (store blob path and timestamp)
+    new_dog = add_dog(dog, attributes, blob_path, timestamp=dog.timestamp if hasattr(dog, 'timestamp') else None)
     # Set image_url in response using signed URL from blob_path
     if hasattr(new_dog, "blob_path") and new_dog.blob_path:
         new_dog.image_url = get_signed_url(new_dog.blob_path)
