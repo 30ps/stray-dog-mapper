@@ -9,12 +9,12 @@ app = FastAPI()
 app.include_router(router)
 client = TestClient(app)
 
-def test_get_dogs():
-    response = client.get("/dogs")
+def test_get_dogs_sightings():
+    response = client.get("/dogs_sightings")
     assert response.status_code == 200
     assert isinstance(response.json(), list)
 
-def test_create_dog_non_dog():
+def test_create_dog_sighting_non_dog():
     # Simulate non-dog image
     valid_base64_image = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/wIAAgMBApU8AAAAAElFTkSuQmCC"
     payload = {
@@ -25,11 +25,11 @@ def test_create_dog_non_dog():
     # Patch analyze_image to return is_dog=False
     from app import vision
     vision.analyze_image = lambda url: {"is_dog": False}
-    response = client.post("/dogs", json=payload)
+    response = client.post("/dogs_sightings", json=payload)
     assert response.status_code == 400
     assert "not a dog" in response.json()["detail"].lower()
 
-def test_create_dog_integration():
+def test_create_dog_sighting_integration():
     import base64
     import os
     import requests
@@ -52,8 +52,8 @@ def test_create_dog_integration():
         "location": {"latitude": 39.3626, "longitude": 22.9465}
     }
 
-    # This will use the real upload_image, analyze_image, and add_dog functions
-    response = client.post("/dogs", json=payload)
+    # This will use the real upload_image, analyze_image, and add_dog_sighting functions
+    response = client.post("/dogs_sightings", json=payload)
     assert response.status_code == 200, response.text
     data = response.json()
     assert "id" in data and data["id"] is not None

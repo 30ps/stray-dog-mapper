@@ -15,7 +15,7 @@ def upload_image(image_data: str) -> str:
     bucket = client.bucket(GCS_BUCKET)
     image_bytes = base64.b64decode(image_data)
     image_id = str(uuid.uuid4())
-    blob_path = f"dogs/{image_id}.jpg"
+    blob_path = f"dogs_sightings/{image_id}.jpg"
     blob = bucket.blob(blob_path)
     blob.upload_from_string(image_bytes, content_type="image/jpeg")
     return blob_path  # Store this in Firestore

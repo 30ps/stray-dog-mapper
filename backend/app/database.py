@@ -4,10 +4,10 @@ import logging
 
 # Firestore integration
 from firebase_admin import firestore
-from app.schemas import DogCreate, DogOut
+from app.schemas import DogSightingCreate, DogSightingOut
 
 db = firestore.Client()
-collection = db.collection("dogs")
+collection = db.collection("dogsSightings")
 
 def get_all_dogs():
     docs = collection.stream()
@@ -21,7 +21,7 @@ def get_all_dogs():
                 "latitude": data["location"].latitude,
                 "longitude": data["location"].longitude,
             }
-        dogs.append(DogOut(**data))
+        dogs.append(DogSightingOut(**data))
     return dogs
 
 def get_dog_by_id(dog_id: str):
@@ -30,9 +30,9 @@ def get_dog_by_id(dog_id: str):
         return None
     data = doc.to_dict()
     data["id"] = doc.id
-    return DogOut(**data)
+    return DogSightingOut(**data)
 
-def add_dog(dog: DogCreate, attributes: dict, blob_path: str, timestamp: str = None):
+def add_dog(dog: DogSightingCreate, attributes: dict, blob_path: str, timestamp: str = None):
     from google.cloud.firestore_v1 import GeoPoint
     dog_data = dog.model_dump()
     # Extract latitude and longitude from the location dict
@@ -57,4 +57,4 @@ def add_dog(dog: DogCreate, attributes: dict, blob_path: str, timestamp: str = N
         "latitude": dog_data["location"].latitude,
         "longitude": dog_data["location"].longitude
     }
-    return DogOut(**dog_data)
+    return DogSightingOut(**dog_data)
