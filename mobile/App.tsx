@@ -38,15 +38,83 @@ export default function App() {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedDog, setSelectedDog] = useState<Dog | null>(null);
   const [uploading, setUploading] = useState(false);
+  // New state for up to 3 photos
+  const [photos, setPhotos] = useState<any[]>([]);
 
   useEffect(() => {
     fetchDogs();
     getLocation();
   }, []);
 
+  // Add a photo (up to 3)
+  const addPhoto = async () => {
+    if (photos.length >= 3) {
+      Alert.alert('Limit reached', 'You can only add up to 3 photos.');
+      return;
+    }
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Camera permission not granted');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setPhotos([...photos, result.assets[0]]);
+    }
+  };
+
+  // Remove a photo
+  const removePhoto = (index: number) => {
+    setPhotos(photos.filter((_, i) => i !== index));
+  };
+
+  // Upload all photos
+  const uploadPhotos = async () => {
+    try {
+      if (!location) {
+        Alert.alert('Error', 'Location not available. Please try again.');
+        return;
+      }
+      if (photos.length === 0) {
+        Alert.alert('Error', 'Please add at least one photo.');
+        return;
+      }
+      setUploading(true);
+      const formData = new FormData();
+      photos.forEach((photo, idx) => {
+        formData.append(`file${idx + 1}`, {
+          uri: photo.uri,
+          name: `dog${idx + 1}.jpg`,
+          type: 'image/jpeg',
+        } as any);
+      });
+      formData.append('location', JSON.stringify({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      }));
+      formData.append('timestamp', new Date().toISOString());
+      await axios.post(`${API_URL}/dogs_sightings`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setUploading(false);
+      setPhotos([]);
+      fetchDogs();
+      Alert.alert('Success', 'Dog sighting submitted!');
+    } catch (e) {
+      setUploading(false);
+      Alert.alert('Error', 'Failed to submit dog sighting.');
+      console.error(e);
+    }
+  };
+
   const fetchDogs = async () => {
     try {
-      const res = await axios.get(`${API_URL}/dogs`);
+      const res = await axios.get(`${API_URL}/dogs_sightings`);
       setDogs(res.data);
     } catch (error) {
       setErrorMsg('Failed to fetch dogs');
@@ -75,59 +143,6 @@ export default function App() {
     }
   };
 
-  const openCameraAndSubmit = async () => {
-    try {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Camera permission not granted');
-        return;
-      }
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.7,
-      });
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const photo = result.assets[0];
-        await submitDog(photo);
-      }
-    } catch (e) {
-      Alert.alert('Error', 'Failed to take or submit photo.');
-      console.error(e);
-    }
-  };
-
-  const submitDog = async (photo: any) => {
-    try {
-      if (!location) {
-        Alert.alert('Error', 'Location not available. Please try again.');
-        return;
-      }
-      setUploading(true);
-      const formData = new FormData();
-      formData.append('file', {
-        uri: photo.uri,
-        name: 'dog.jpg',
-        type: 'image/jpeg',
-      } as any);
-      formData.append('location', JSON.stringify({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      }));
-      formData.append('timestamp', new Date().toISOString());
-      await axios.post(`${API_URL}/dogs`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      setUploading(false);
-      fetchDogs();
-      Alert.alert('Success', 'Dog sighting submitted!');
-    } catch (e) {
-      setUploading(false);
-      Alert.alert('Error', 'Failed to submit dog sighting.');
-      console.error(e);
-    }
-  };
 
   const handleMarkerPress = (dog: Dog) => {
     setSelectedDog(dog);
@@ -139,9 +154,25 @@ export default function App() {
       {/* Title at the top */}
       <View style={styles.headerContainer}>
         <Text style={styles.header}>Stray Dog Mapper</Text>
-        <TouchableOpacity style={styles.photoButton} onPress={openCameraAndSubmit} disabled={uploading}>
+        <TouchableOpacity style={styles.photoButton} onPress={addPhoto} disabled={uploading || photos.length >= 3}>
           <Ionicons name="camera" size={32} color="#007AFF" />
         </TouchableOpacity>
+      </View>
+      {/* Show selected photos and upload button */}
+      <View style={styles.photosContainer}>
+        {photos.map((photo, idx) => (
+          <View key={idx} style={styles.photoThumbWrapper}>
+            <Image source={{ uri: photo.uri }} style={styles.photoThumb} />
+            <TouchableOpacity style={styles.removePhotoBtn} onPress={() => removePhoto(idx)}>
+              <Ionicons name="close-circle" size={24} color="#ff3b30" />
+            </TouchableOpacity>
+          </View>
+        ))}
+        {photos.length > 0 && (
+          <TouchableOpacity style={styles.uploadBtn} onPress={uploadPhotos} disabled={uploading}>
+            <Text style={{ color: '#fff', fontWeight: 'bold' }}>Upload</Text>
+          </TouchableOpacity>
+        )}
       </View>
       <View style={{ flex: 1 }}>
         <MapView
@@ -221,6 +252,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 12,
+  },
+  photosContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginBottom: 8,
+    minHeight: 60,
+  },
+  photoThumbWrapper: {
+    position: 'relative',
+    marginRight: 8,
+  },
+  photoThumb: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    backgroundColor: '#eee',
+  },
+  removePhotoBtn: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+  },
+  uploadBtn: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginLeft: 8,
   },
   map: {
     flex: 1,
