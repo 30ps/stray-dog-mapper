@@ -32,7 +32,7 @@ def get_dog_by_id(dog_id: str):
     data["id"] = doc.id
     return DogSightingOut(**data)
 
-def add_dog(dog: DogSightingCreate, attributes: dict, blob_path: str, timestamp: str = None):
+def add_dog_sighting(dog: DogSightingCreate, attributes: dict, blob_path: str, timestamp: str = None):
     from google.cloud.firestore_v1 import GeoPoint
     dog_data = dog.model_dump()
     # Extract latitude and longitude from the location dict

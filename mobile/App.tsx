@@ -1,5 +1,48 @@
 
 import React, { useState, useEffect } from 'react';
+// Magnesia region bounding box (approximate)
+const MAGNESIA_BOUNDS = {
+  minLat: 39.0,
+  maxLat: 39.7,
+  minLon: 22.6,
+  maxLon: 23.3,
+};
+
+function isInMagnesia(lat: number, lon: number) {
+  return (
+    lat >= MAGNESIA_BOUNDS.minLat &&
+    lat <= MAGNESIA_BOUNDS.maxLat &&
+    lon >= MAGNESIA_BOUNDS.minLon &&
+    lon <= MAGNESIA_BOUNDS.maxLon
+  );
+}
+// Helper to prettify attribute names
+const prettifyKey = (key: string) => {
+  return key
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
+// Recursive attribute renderer
+const renderAttributes = (attributes: any, indent: number = 0) => {
+  if (!attributes) return null;
+  return Object.entries(attributes).map(([key, value]) => {
+    if (key === 'is_dog') return null;
+    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      // Remove bold for color_markings and facial_features, fix indentation
+      const isSpecial = key === 'color_markings' || key === 'facial_features';
+      return (
+        <View key={key} style={{ marginLeft: indent, marginBottom: 2 }}>
+          <Text style={{ textAlign: 'left', marginLeft: 0 }}>{prettifyKey(key)}:</Text>
+          {renderAttributes(value, indent + 16)}
+        </View>
+      );
+    }
+    return (
+      <Text key={key} style={{ textAlign: 'left', marginLeft: indent }}>{prettifyKey(key)}: {String(value)}</Text>
+    );
+  });
+};
 import { StyleSheet, Text, View, Modal, Image, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import axios from 'axios';
@@ -12,16 +55,15 @@ const API_URL = 'https://stray-dog-mapper-266065529222.europe-west1.run.app';
 
 
 interface Dog {
-  id: number;
-  breed: string;
-  age: string;
-  size: string;
+  id: string | number;
   location: {
     latitude: number;
     longitude: number;
   };
   image_url: string;
   timestamp: string;
+  attributes?: { [key: string]: any };
+  [key: string]: any; // allow extra fields
 }
 
 
@@ -40,9 +82,10 @@ export default function App() {
   const [uploading, setUploading] = useState(false);
   // New state for up to 3 photos
   const [photos, setPhotos] = useState<any[]>([]);
+  // Restriction state
+  const [regionSupported, setRegionSupported] = useState<boolean | null>(null);
 
   useEffect(() => {
-    fetchDogs();
     getLocation();
   }, []);
 
@@ -127,6 +170,7 @@ export default function App() {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         setErrorMsg('Permission to access location was denied');
+        setRegionSupported(false);
         return;
       }
       let location = await Location.getCurrentPositionAsync({});
@@ -137,8 +181,18 @@ export default function App() {
         latitudeDelta: 0.5,
         longitudeDelta: 0.5,
       });
+      // Check if in Magnesia
+      const inMagnesia = isInMagnesia(location.coords.latitude, location.coords.longitude);
+      setRegionSupported(inMagnesia);
+      if (inMagnesia) {
+        fetchDogs();
+      } else {
+        setErrorMsg('Unfortunately, Stray Dog Mapper is not supported in this region');
+        // Optionally: send location to backend here (see next step)
+      }
     } catch (error) {
       setErrorMsg('Error getting location');
+      setRegionSupported(false);
       console.error(error);
     }
   };
@@ -148,6 +202,17 @@ export default function App() {
     setSelectedDog(dog);
     setModalVisible(true);
   };
+
+  // If regionSupported is false, show error and block app UI
+  if (regionSupported === false) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}> 
+        <Text style={{ color: 'red', fontSize: 18, textAlign: 'center', margin: 24 }}>
+          Unfortunately, Stray Dog Mapper is not supported in this region
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -210,10 +275,18 @@ export default function App() {
           <View style={styles.modalContent}>
             {selectedDog && (
               <>
-                <Text style={styles.modalTitle}>{selectedDog.breed || 'Unknown Breed'}</Text>
+                <Text style={styles.modalTitle}>{selectedDog.attributes?.breed || selectedDog.breed || 'Unknown Breed'}</Text>
                 <Image source={{ uri: selectedDog.image_url }} style={styles.dogImage} />
-                <Text>Age: {selectedDog.age || 'Unknown'}</Text>
-                <Text>Size: {selectedDog.size || 'Unknown'}</Text>
+                {/* Render all attributes if present, prettified and nested */}
+                {selectedDog.attributes && Object.keys(selectedDog.attributes).length > 0 && (
+                  <View style={{ marginBottom: 8, width: '100%' }}>
+                    {renderAttributes(selectedDog.attributes)}
+                  </View>
+                )}
+                {/* Fallback for common fields if not in attributes */}
+                {!selectedDog.attributes?.size && (
+                  <Text>Size: {selectedDog.size || 'Unknown'}</Text>
+                )}
                 <Text>Timestamp: {selectedDog.timestamp ? new Date(selectedDog.timestamp).toLocaleString() : 'Unknown'}</Text>
                 <Text>Lat: {selectedDog.location.latitude.toFixed(5)}, Lon: {selectedDog.location.longitude.toFixed(5)}</Text>
                 <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
