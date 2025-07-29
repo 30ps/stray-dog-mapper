@@ -4,6 +4,6 @@ google-cloud-storage
 google-cloud-vision
 uvicorn
 pydantic
-google-generativeai
+google-genai
 python-dotenv
 pytest
