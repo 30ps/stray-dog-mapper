@@ -1,29 +1,60 @@
-import os
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
 
-# Get database path from environment variable, default to in-memory if not set
-SQLITE_DB_PATH = os.getenv("SQLITE_DB_PATH", "sqlite:///:memory:")
+import logging
+# ...existing code for SQLAlchemy setup...
 
-# Create the database directory if it doesn't exist
-if SQLITE_DB_PATH and SQLITE_DB_PATH != "sqlite:///:memory:":
-    db_dir = os.path.dirname(SQLITE_DB_PATH)
-    if db_dir:
-        os.makedirs(db_dir, exist_ok=True)
+# Firestore integration
+from firebase_admin import firestore
+from app.schemas import DogSightingCreate, DogSightingOut
 
-# Use the path in the SQLAlchemy URL
-SQLALCHEMY_DATABASE_URL = f"sqlite:///{SQLITE_DB_PATH}" if not SQLITE_DB_PATH.startswith("sqlite://") else SQLITE_DB_PATH
+db = firestore.Client()
+collection = db.collection("dogsSightings")
 
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
+def get_all_dogs():
+    docs = collection.stream()
+    dogs = []
+    for doc in docs:
+        data = doc.to_dict()
+        data["id"] = doc.id
+        # Convert GeoPoint to dict
+        if "location" in data and hasattr(data["location"], "latitude"):
+            data["location"] = {
+                "latitude": data["location"].latitude,
+                "longitude": data["location"].longitude,
+            }
+        dogs.append(DogSightingOut(**data))
+    return dogs
 
-def get_db():
-    db = SessionLocal()
+def get_dog_by_id(dog_id: str):
+    doc = collection.document(dog_id).get()
+    if not doc.exists:
+        return None
+    data = doc.to_dict()
+    data["id"] = doc.id
+    return DogSightingOut(**data)
+
+def add_dog_sighting(dog: DogSightingCreate, attributes: dict, blob_path: str, timestamp: str = None):
+    from google.cloud.firestore_v1 import GeoPoint
+    dog_data = dog.model_dump()
+    # Extract latitude and longitude from the location dict
+    location = dog_data.pop("location")
+    dog_data["location"] = GeoPoint(location["latitude"], location["longitude"])
+    dog_data["attributes"] = attributes
+    dog_data["blob_path"] = blob_path
+    # Add timestamp if present (from argument or dog object)
+    if timestamp:
+        dog_data["timestamp"] = timestamp
+    elif hasattr(dog, "timestamp") and dog.timestamp:
+        dog_data["timestamp"] = dog.timestamp
+    doc_ref = collection.document()
     try:
-        yield db
-    finally:
-        db.close()
+        doc_ref.set(dog_data)
+    except Exception as e:
+        logging.error(f"Firestore write failed: {e}", exc_info=True)
+        raise
+    dog_data["id"] = doc_ref.id
+    # Convert GeoPoint to dict for output
+    dog_data["location"] = {
+        "latitude": dog_data["location"].latitude,
+        "longitude": dog_data["location"].longitude
+    }
+    return DogSightingOut(**dog_data)
